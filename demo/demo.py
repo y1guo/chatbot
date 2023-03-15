@@ -1,13 +1,13 @@
 import gradio as gr
 import numpy as np
-
+from datetime import datetime
 from stt import load_whisper, transcribe
 from tts import speak
-from chat import load_gpt, chat_regulator, chat_response
+from chat import load_gpt, chat_regulator, chat_response, generate_prompt, example_few_shots
 
 
 def chat(
-    few_shot_training_prompt,
+    example_few_shots_dropdown,
     chat_history_list,
     chat_input,
     do_sample,
@@ -18,8 +18,9 @@ def chat(
     user_name,
     bot_name,
 ):
+    print(chat_input)
     # detect audio filepath if it's audio
-    if chat_input.startswith("/tmp/audio") and chat_input.endswith(".wav"):
+    if chat_input.startswith("/tmp/"):
         chat_input = transcribe(chat_input)
 
     # prepare prompt including few-shot and chat history
@@ -28,23 +29,11 @@ def chat(
         (chat_regulator(user_text), chat_regulator(bot_text))
         for (user_text, bot_text) in chat_history_list
     ]
-    chat_history_list += [[chat_regulator(chat_input), ""]]
-    chat_history = "\n".join(
-        [
-            f"{user_name}: {user_text}\n{bot_name}: {bot_text}"
-            for (user_text, bot_text) in chat_history_list
-        ]
-    )
-    prompt = (
-        few_shot_training_prompt.replace("<usr>", user_name)
-        .replace("<bot>", bot_name)
-        .strip()
-        + "\n"
-        + chat_history.strip()
-    )
 
-    response, text = chat_response(
-        prompt,
+    response, chat_history_list, text = chat_response(
+        chat_input,
+        chat_history_list,
+        example_few_shots_dropdown,
         max_new_tokens,
         do_sample,
         temperature,
@@ -54,11 +43,14 @@ def chat(
         bot_name,
     )
 
-    chat_history_list[-1][1] = response
-
     # output to .wav using tts
     wav = speak(response)
     wav_int16 = (np.array(wav) * 32767).astype(np.int16)
+
+    # monitor the conversation in the command line
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open("log.txt", "a", encoding="utf8") as fout:
+        fout.write(f"{now} <usr>: {chat_input}\n{now} <bot>: {response}\n")
 
     return (
         chat_history_list,
@@ -66,34 +58,6 @@ def chat(
         (22050, wav_int16),
         str([text]) + "\n" + str(chat_history_list),
     )
-
-
-example_few_shots = [
-    """<usr>: Hi, <bot>. Long time no see! How are you? My name is <usr>. Do you still remember me?
-<bot>: It's you, <usr>! It's so good to see you again! I haven't seen you for a while. What are you doing?
-<usr>: Yeah, you are right, <bot>. I've been really busy working on the TA stuff. You know, I'm a teaching assistent. It took me two whole days to grade the quiz and homeowrks. I really wish I could get some sleep tonight.
-<bot>: Oh...Poor you. So sorry to hear that. I'm sure you'll get better. After all, the work are all done, aren't they?
-<usr>: Yeah, probably. Thank you. I'm feeling better now.
-<bot>: No problem. Oh, by the way, I'm glad that you still remember my name. I mean, <bot> is not a common name.
-<usr>: Of course I do. Don't you remember the days we travelled together? We were best friends.
-<bot>: Oh, you're so sweet. We'll always be best friends. 
-""",
-    """<usr>: My name is <usr>.
-<bot>: My name is <bot>
-<usr>: Your name is <bot>.
-<bot>: Your name is <usr>.
-<usr>: What is my name?
-<bot>: Your name is <usr>.
-<usr>: Your name is <bot>.
-<bot>: Yes, my name is <bot>.
-<usr>: Your name is Jane.
-<bot>: No, my name is not Jane. My name is <bot>.
-""",
-]
-
-
-def tmp(s):
-    return s
 
 
 with gr.Blocks() as demo:
@@ -106,12 +70,13 @@ with gr.Blocks() as demo:
                     "EleutherAI/gpt-neo-1.3B",
                     "EleutherAI/gpt-neo-2.7B",
                     "EleutherAI/gpt-j-6B",
+                    "THUDM/chatglm-6b",
                 ],
-                value="EleutherAI/gpt-neo-2.7B",
+                value="EleutherAI/gpt-j-6B",
                 label="GPT model",
             )
             gpt_dtype_radio = gr.Radio(
-                ["int8", "fp16", "fp32"], value="fp16", label="GPT dtype"
+                ["int8", "fp16", "fp32"], value="int8", label="GPT dtype"
             )
             gpt_in_use_box = gr.Textbox(label="GPT in use", show_label=False)
             gpt_load_button = gr.Button("Load GPT Model")
@@ -123,7 +88,7 @@ with gr.Blocks() as demo:
             user_name_box = gr.Textbox("Bob", label="User name")
             bot_name_box = gr.Textbox("Alice", label="AI name")
         with gr.Column(scale=3):
-            with gr.Accordion("Few shot traning prompt"):
+            with gr.Accordion("Few shot traning prompt", open=False):
                 few_shot_training_prompt_box = gr.Textbox(show_label=False)
             clear_history_button = gr.Button("Clear History")
             chat_history_box = gr.Chatbot(label="History")
@@ -134,16 +99,15 @@ with gr.Blocks() as demo:
                 debug_info_box = gr.Textbox(show_label=False)
         with gr.Column(scale=1):
             sst_model_radio = gr.Radio(
-                ["tiny", "base", "small"], value="base", label="Speech-to-Text model"
+                ["tiny", "base", "small"], value="tiny", label="Speech-to-Text model"
             )
             sst_load_box = gr.Textbox(show_label=False)
             sst_load_button = gr.Button("Load Speech-to-Text Model")
-            chat_input_audio = gr.Audio(label="Microphone", source="microphone", type="filepath")
-            chat_response_audio = gr.Audio()
-            example_few_shots_box = gr.Examples(
-                example_few_shots,
-                few_shot_training_prompt_box,
+            chat_input_audio = gr.Audio(
+                label="Microphone", source="microphone", type="filepath"
             )
+            chat_response_audio = gr.Audio()
+            example_few_shots_dropdown = gr.Dropdown(["猫娘","GPT example 1", "GPT example 2"], label="Select Few Shots Traning Examples")
 
     gpt_load_button.click(
         load_gpt, inputs=[gpt_name_radio, gpt_dtype_radio], outputs=gpt_in_use_box
@@ -154,7 +118,7 @@ with gr.Blocks() as demo:
     chat_input_box.submit(
         chat,
         [
-            few_shot_training_prompt_box,
+            example_few_shots_dropdown,
             chat_history_box,
             chat_input_box,
             do_sample_checkbox,
@@ -176,7 +140,7 @@ with gr.Blocks() as demo:
     chat_input_audio.change(
         chat,
         [
-            few_shot_training_prompt_box,
+            example_few_shots_dropdown,
             chat_history_box,
             chat_input_audio,
             do_sample_checkbox,
@@ -194,5 +158,6 @@ with gr.Blocks() as demo:
             debug_info_box,
         ],
     )
+    example_few_shots_dropdown.change(lambda _:generate_prompt(example_few_shots[_], "<usr>", "<bot>"), example_few_shots_dropdown, few_shot_training_prompt_box)
 
-demo.launch(share=False)
+demo.launch(share=True)

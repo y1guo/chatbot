@@ -2,6 +2,8 @@
 
 A chatbot demo that allows speech-to-speech or text based chat experience with the LLM. Local deployment. No APIs used.
 
+![](screenshot.png)
+
 ## Environment
 
 Create a virtual environment, I used conda here

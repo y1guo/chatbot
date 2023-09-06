@@ -1,67 +1,11 @@
 import gradio as gr
-import numpy as np
-from datetime import datetime
-from stt import load_whisper, transcribe
-from tts import speak
-from chat import load_gpt, chat_regulator, chat_response, generate_prompt, example_few_shots
-
-
-def chat(
-    example_few_shots_dropdown,
-    chat_history_list,
-    chat_input,
-    do_sample,
-    temperature,
-    top_k,
-    top_p,
-    max_new_tokens,
-    user_name,
-    bot_name,
-):
-    print(f"chat_input = {chat_input}")
-    # detect audio filepath if it's audio
-    if chat_input.startswith("/tmp/"):
-        chat_input = transcribe(chat_input)
-        print(f"Transcribed chat_input = {chat_input}")
-
-    # prepare prompt including few-shot and chat history
-    # regulate each term every iteration since there might be '<br>' added into them.
-    chat_history_list = [
-        (chat_regulator(user_text), chat_regulator(bot_text)) for (user_text, bot_text) in chat_history_list
-    ]
-
-    response, chat_history_list, text = chat_response(
-        chat_input,
-        chat_history_list,
-        example_few_shots_dropdown,
-        max_new_tokens,
-        do_sample,
-        temperature,
-        top_k,
-        top_p,
-        user_name,
-        bot_name,
-    )
-
-    # output to .wav using tts
-    wav = speak(response)
-    wav_int16 = (np.array(wav) * 32767).astype(np.int16)
-
-    # monitor the conversation in the command line
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    with open("log.txt", "a", encoding="utf8") as fout:
-        fout.write(f"{now} <usr>: {chat_input}\n{now} <bot>: {response}\n")
-
-    return (
-        chat_history_list,
-        None,
-        (22050, wav_int16),
-        str([text]) + "\n" + str(chat_history_list),
-    )
+from stt import load_whisper
+from tts import load_tts
+from chat import load_gpt, generate_prompt, chat, EXAMPLE_FEW_SHOTS
 
 
 with gr.Blocks() as demo:
-    gr.Markdown("""# <center>人  工  智  障</center>""")
+    gr.Markdown("""# <center>Chatbot</center>""")
     with gr.Row():
         with gr.Column(scale=1):
             gpt_name_radio = gr.Radio(
@@ -95,13 +39,20 @@ with gr.Blocks() as demo:
             with gr.Accordion("Debug", open=False):
                 debug_info_box = gr.Textbox(show_label=False)
         with gr.Column(scale=1):
-            sst_model_radio = gr.Radio(["tiny", "base", "small"], value="tiny", label="Speech-to-Text model")
+            sst_model_radio = gr.Radio(
+                ["tiny", "base", "small", "medium", "large"], value="tiny", label="Speech-to-Text model"
+            )
             sst_load_box = gr.Textbox(show_label=False)
             sst_load_button = gr.Button("Load Speech-to-Text Model")
             chat_input_audio = gr.Audio(label="Microphone", source="microphone", type="filepath")
-            chat_response_audio = gr.Audio()
+            tts_model_radio = gr.Radio(
+                ["en/vctk/vits", "zh-CN/baker/tacotron2-DDC-GST"], value="en/vctk/vits", label="Text-to-Speech model"
+            )
+            tts_load_box = gr.Textbox(show_label=False)
+            tts_load_button = gr.Button("Load Text-to-Speech Model")
+            chat_response_audio = gr.Audio(autoplay=True)
             example_few_shots_dropdown = gr.Dropdown(
-                ["猫娘", "GPT example 1", "GPT example 2"], label="Select Few Shots Traning Examples"
+                ["", "GPT example 1", "GPT example 2", "猫娘"], label="Select Few Shots Traning Examples"
             )
 
     gpt_load_button.click(load_gpt, inputs=[gpt_name_radio, gpt_dtype_radio], outputs=gpt_in_use_box)
@@ -128,6 +79,7 @@ with gr.Blocks() as demo:
         ],
     )
     sst_load_button.click(load_whisper, sst_model_radio, sst_load_box)
+    tts_load_button.click(load_tts, tts_model_radio, tts_load_box)
     chat_input_audio.stop_recording(
         chat,
         [
@@ -150,7 +102,7 @@ with gr.Blocks() as demo:
         ],
     )
     example_few_shots_dropdown.change(
-        lambda _: generate_prompt(example_few_shots[_], "<usr>", "<bot>"),
+        lambda _: generate_prompt(EXAMPLE_FEW_SHOTS[_], "<usr>", "<bot>"),
         example_few_shots_dropdown,
         few_shot_training_prompt_box,
     )

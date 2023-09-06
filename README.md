@@ -31,7 +31,7 @@ conda install ffmpeg -c pytorch
 Install other dependencies
 
 ```bash
-pip install gradio transformers TTS openai-whisper 
+pip install gradio transformers TTS openai-whisper opencc
 ```
 
 Now, it's sufficient for the chatbot to run with GPT-J and GPT-neo family.
@@ -61,7 +61,7 @@ pip install bitsandbytes accelerate
 ## Launch the Demo
 
 ```bash
-python demo/demo.py
+python demo/launch.py
 ```
 
 Then open `https://localhost:7860` in the browser, or the link provided after the server fully started.

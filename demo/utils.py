@@ -7,6 +7,13 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # freeup the model and free up GPU RAM
 def freeup_vram(*args):
+    """Free up GPU RAM.
+
+    Parameters
+    ----------
+    *args : str
+        Variable names to be deleted
+    """
     memory_used_before = torch.cuda.memory_reserved(0) / 1024**3
     for var in args:
         try:

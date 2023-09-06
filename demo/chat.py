@@ -1,13 +1,17 @@
 import torch
+import numpy as np
+from datetime import datetime
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModel
 from utils import DEVICE, freeup_vram
+from stt import transcribe
+from tts import speak
 from typing import cast
 
 
 _model_name = None
 
 
-example_few_shots = {
+EXAMPLE_FEW_SHOTS = {
     "": [],
     "猫娘": [
         # 猫娘prompt来源 BV1k84y1A7Hq
@@ -53,7 +57,21 @@ example_few_shots = {
 }
 
 
-def load_gpt(model_name, model_dtype):
+def load_gpt(model_name: str, model_dtype: str):
+    """Load GPT model.
+
+    Parameters
+    ----------
+    model_name : str
+        Model name. Example: "EleutherAI/gpt-j-6B"
+    model_dtype : str
+        Model data type. Example: "fp32"
+
+    Returns
+    -------
+    str
+        Status message
+    """
     freeup_vram("model", "tokenizer")
 
     global model, tokenizer, _model_name
@@ -82,14 +100,42 @@ def load_gpt(model_name, model_dtype):
     return f"{model_name}  in  {model_dtype}"
 
 
-def chat_regulator(text):
+def chat_regulator(text: str):
+    """Regulate chat text.
+
+    Parameters
+    ----------
+    text : str
+        Text to be regulated
+
+    Returns
+    -------
+    str
+        Regulated text
+    """
     if not text:
         return "Silence..."
     # return " ".join(re.split(" |\t|\n|\r", text)).strip()
     return text.strip().replace("<br>", "")
 
 
-def generate_prompt(chat_history_list, user_name, bot_name):
+def generate_prompt(chat_history_list: list[tuple[str, str]], user_name: str, bot_name: str):
+    """Generate prompt from chat history.
+
+    Parameters
+    ----------
+    chat_history_list : list[tuple[str, str]]
+        Chat history list
+    user_name : str
+        User name. Example: "Bob"
+    bot_name : str
+        AI name. Example: "Alice"
+
+    Returns
+    -------
+    str
+        Generated prompt
+    """
     chat_history = "\n".join(
         [f"{user_name}: {user_text}\n{bot_name}: {bot_text}" for (user_text, bot_text) in chat_history_list]
     )
@@ -99,28 +145,62 @@ def generate_prompt(chat_history_list, user_name, bot_name):
 
 # extract AI response
 def chat_response(
-    chat_input,
-    chat_history_list,
-    example_few_shots_dropdown,
-    max_new_tokens,
-    do_sample,
-    temperature,
-    top_k,
-    top_p,
-    user_name,
-    bot_name,
+    example_few_shots_dropdown: str,
+    chat_history_list: list[tuple[str, str]],
+    chat_input: str,
+    do_sample: bool,
+    temperature: float,
+    top_k: int,
+    top_p: float,
+    max_new_tokens: int,
+    user_name: str,
+    bot_name: str,
 ):
+    """Generate AI response.
+
+    Parameters
+    ----------
+    example_few_shots_dropdown : str
+        Few-shot training example dropdown. Example: "GPT example 1"
+    chat_history_list : list[tuple[str, str]]
+        Chat history
+    chat_input : str
+        User input text
+    do_sample : bool
+        Do sampling or not
+    temperature : float
+        Sampling temperature
+    top_k : int
+        Top k
+    top_p : float
+        Top p
+    max_new_tokens : int
+        Max number of new tokens
+    user_name : str
+        User name. Example: "Bob"
+    bot_name : str
+        AI name. Example: "Alice"
+
+    Returns
+    -------
+    regulated_response : str
+        Generated AI response, regulated
+    chat_history_list : list[tuple[str, str]]
+        Updated chat history list
+    generated_text : str
+        Full generated text, unregulated, including the prompt
+    """
     try:
         if _model_name in ["THUDM/chatglm-6b", "THUDM/chatglm2-6b"]:
             chat_response, chat_history_list = model.chat(
-                tokenizer, chat_input, history=example_few_shots[example_few_shots_dropdown] + chat_history_list
+                tokenizer, chat_input, history=EXAMPLE_FEW_SHOTS[example_few_shots_dropdown] + chat_history_list
             )
             generated_text = generate_prompt(chat_history_list, user_name, bot_name)
-            chat_history_list = chat_history_list[len(example_few_shots[example_few_shots_dropdown]) :]
+            chat_history_list = chat_history_list[len(EXAMPLE_FEW_SHOTS[example_few_shots_dropdown]) :]
         else:
-            chat_history_list += [[chat_regulator(chat_input), ""]]
+            chat_history_list += [(chat_regulator(chat_input), "")]
             prompt = generate_prompt(
-                example_few_shots[example_few_shots_dropdown] + chat_history_list, user_name, bot_name
+                EXAMPLE_FEW_SHOTS[example_few_shots_dropdown] + chat_history_list, user_name, bot_name
             )
             # 10 trials of searching for the stop token, i.e., user_name+":". If not found, continue generating text.
             recur_prompt = prompt
@@ -144,9 +224,9 @@ def chat_response(
                     break
             chat_response = generated_text[len(prompt) : eos_idx].replace(bot_name + ":", "")
     except:
-        chat_history_list += [[chat_regulator(chat_input), ""]]
+        chat_history_list += [(chat_regulator(chat_input), "")]
         prompt = generate_prompt(
-            example_few_shots[example_few_shots_dropdown] + chat_history_list, user_name, bot_name
+            EXAMPLE_FEW_SHOTS[example_few_shots_dropdown] + chat_history_list, user_name, bot_name
         )
         generated_text = prompt + "[System Error]: Failed to do inference."
         chat_response = "[System Error]: Failed to do inference."
@@ -157,3 +237,104 @@ def chat_response(
     chat_history_list[-1] = (_in, regulated_response)
 
     return regulated_response, chat_history_list, generated_text
+
+
+def chat(
+    example_few_shots_dropdown: str,
+    chat_history_list: list[tuple[str, str]],
+    chat_input: str,
+    do_sample: bool,
+    temperature: float,
+    top_k: int,
+    top_p: float,
+    max_new_tokens: int,
+    user_name: str,
+    bot_name: str,
+):
+    """Main wrapper function for chat.
+
+    Parameters
+    ----------
+    example_few_shots_dropdown : str
+        Few-shot training example dropdown. Example: "GPT example 1"
+    chat_history_list : list[tuple[str, str]]
+        Chat history
+    chat_input : str
+        User input text
+    do_sample : bool
+        Do sampling or not
+    temperature : float
+        Sampling temperature
+    top_k : int
+        Top k
+    top_p : float
+        Top p
+    max_new_tokens : int
+        Max number of new tokens
+    user_name : str
+        User name. Example: "Bob"
+    bot_name : str
+        AI name. Example: "Alice"
+
+    Returns
+    -------
+    chat_history_list : list[tuple[str, str]]
+        Updated chat history list
+    chat_input : None
+        Clear chat input
+    (audio_sample_rate, audio_waveform) : tuple[int, np.ndarray]
+        Audio sample rate and waveform
+    debug_info : str
+        Debug info
+    """
+    print(f"chat_input = {chat_input}")
+    # detect audio filepath if it's audio
+    stt_success = True
+    if chat_input.startswith("/tmp/"):
+        stt_out = transcribe(chat_input)
+        if isinstance(stt_out, str):
+            chat_input = stt_out
+            print(f"Transcribed chat_input = {chat_input}")
+        else:
+            print(f"[System Error]: Failed to transcribe '{chat_input}'.")
+            stt_success = False
+
+    # prepare prompt including few-shot and chat history
+    # regulate each term every iteration since there might be '<br>' added into them.
+    chat_history_list = [
+        (chat_regulator(user_text), chat_regulator(bot_text)) for (user_text, bot_text) in chat_history_list
+    ]
+
+    if stt_success:
+        response, chat_history_list, text = chat_response(
+            example_few_shots_dropdown,
+            chat_history_list,
+            chat_input,
+            do_sample,
+            temperature,
+            top_k,
+            top_p,
+            max_new_tokens,
+            user_name,
+            bot_name,
+        )
+    else:
+        response = "[System Error]: Failed to transcribe."
+        chat_history_list += [("", response)]
+        text = ""
+
+    # output to .wav using tts
+    wav = speak(response)
+    wav_int16 = (np.array(wav) / np.max(np.abs(wav)) * 0.25 * 32768).astype(np.int16)
+
+    # monitor the conversation in the command line
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open("log.txt", "a", encoding="utf8") as fout:
+        fout.write(f"{now} <usr>: {chat_input}\n{now} <bot>: {response}\n")
+
+    return (
+        chat_history_list,
+        None,
+        (22050, wav_int16),
+        str([text]) + "\n" + str(chat_history_list),
+    )

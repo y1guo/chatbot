@@ -75,24 +75,29 @@ def load_gpt(model_name: str, model_dtype: str):
     freeup_vram("model", "tokenizer")
 
     global model, tokenizer, _model_name
-    if model_name in ["THUDM/chatglm-6b", "THUDM/chatglm2-6b"]:
+    torch_dtype = torch.float16 if model_dtype == "fp16" else torch.float32
+    if model_name.startswith("THUDM"):
         tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-        model = AutoModel.from_pretrained(model_name, trust_remote_code=True).half()
-        model_dtype = "fp16"
+        if model_dtype == "int4":
+            model = AutoModel.from_pretrained(model_name, trust_remote_code=True, load_in_4bit=True)
+        elif model_dtype == "int8":
+            model = AutoModel.from_pretrained(model_name, trust_remote_code=True, load_in_8bit=True)
+        else:
+            model = AutoModel.from_pretrained(model_name, trust_remote_code=True, torch_dtype=torch_dtype).to(DEVICE)
     else:
         tokenizer = AutoTokenizer.from_pretrained(model_name)
-        if model_dtype == "int8":
+        if model_dtype == "int4":
+            model = AutoModelForCausalLM.from_pretrained(model_name, load_in_4bit=True)
+        elif model_dtype == "int8":
             model = AutoModelForCausalLM.from_pretrained(model_name, load_in_8bit=True)
         else:
-            model = AutoModelForCausalLM.from_pretrained(
-                model_name,
-                torch_dtype=torch.float16 if model_dtype == "fp16" else "auto",
-            )
+            model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch_dtype).to(DEVICE)
+
+    if model_name.startswith("EleutherAI"):
         # set pad_token_id to eos_token_id because GPT2 does not have a EOS token
         model.config.pad_token_id = model.config.eos_token_id
         model.generation_config.pad_token_id = model.config.eos_token_id
 
-    model = model.to(DEVICE)
     model.eval()
 
     _model_name = model_name
@@ -250,6 +255,7 @@ def chat(
     max_new_tokens: int,
     user_name: str,
     bot_name: str,
+    volume: float,
 ):
     """Main wrapper function for chat.
 
@@ -275,6 +281,8 @@ def chat(
         User name. Example: "Bob"
     bot_name : str
         AI name. Example: "Alice"
+    volume : float
+        Speech volume of the response
 
     Returns
     -------
@@ -287,14 +295,13 @@ def chat(
     debug_info : str
         Debug info
     """
-    print(f"chat_input = {chat_input}")
     # detect audio filepath if it's audio
     stt_success = True
     if chat_input.startswith("/tmp/"):
         stt_out = transcribe(chat_input)
         if isinstance(stt_out, str):
             chat_input = stt_out
-            print(f"Transcribed chat_input = {chat_input}")
+            print(f"The AI heard: {chat_input}")
         else:
             print(f"[System Error]: Failed to transcribe '{chat_input}'.")
             stt_success = False
@@ -323,9 +330,12 @@ def chat(
         chat_history_list += [("", response)]
         text = ""
 
+    print(f"The AI said: {response}")
+
     # output to .wav using tts
     wav = speak(response)
-    wav_int16 = (np.array(wav) / np.max(np.abs(wav)) * 0.25 * 32768).astype(np.int16)
+    volume_factor = 2 ** ((volume / 100 - 1) * 6)
+    wav_int16 = (np.array(wav) / np.max(np.abs(wav)) * volume_factor * 32768).astype(np.int16)
 
     # monitor the conversation in the command line
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

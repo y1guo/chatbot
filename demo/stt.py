@@ -1,5 +1,5 @@
 import whisper, opencc
-from utils import DEVICE, freeup_vram
+from utils import DEVICE_AUX, freeup_vram
 
 
 converter = opencc.OpenCC("t2s.json")
@@ -20,7 +20,7 @@ def load_whisper(name: str):
     """
     global model
     freeup_vram("model")
-    model = whisper.load_model(name, device=DEVICE)
+    model = whisper.load_model(name, device=DEVICE_AUX)
     return f"Whisper loaded with the {name} model"
 
 

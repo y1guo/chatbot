@@ -130,3 +130,6 @@ dmypy.json
 
 # custom files
 log.txt
+
+# dev tmp files
+prototype.ipynb

@@ -1,3 +1,6 @@
+import warnings
+
+warnings.filterwarnings("ignore")
 import gradio as gr
 from stt import load_whisper
 from tts import load_tts
@@ -16,11 +19,15 @@ with gr.Blocks() as demo:
                     "EleutherAI/gpt-j-6B",
                     "THUDM/chatglm-6b",
                     "THUDM/chatglm2-6b",
+                    "meta-llama/llama-2-7b",
+                    "meta-llama/llama-2-13b",
+                    "meta-llama/Llama-2-7b-chat-hf",
+                    "meta-llama/Llama-2-13b-chat-hf",
                 ],
-                value="EleutherAI/gpt-j-6B",
-                label="GPT model",
+                value="meta-llama/Llama-2-7b-chat-hf",
+                label="LLM model",
             )
-            gpt_dtype_radio = gr.Radio(["int8", "fp16", "fp32"], value="fp16", label="GPT dtype")
+            gpt_dtype_radio = gr.Radio(["int4", "int8", "fp16", "fp32"], value="fp16", label="model dtype")
             gpt_in_use_box = gr.Textbox(label="GPT in use", show_label=False)
             gpt_load_button = gr.Button("Load GPT Model")
             do_sample_checkbox = gr.Checkbox(True, label="Do sample")
@@ -50,6 +57,7 @@ with gr.Blocks() as demo:
             )
             tts_load_box = gr.Textbox(show_label=False)
             tts_load_button = gr.Button("Load Text-to-Speech Model")
+            response_volume = gr.Slider(0, 100, 67, label="Volume", step=1)
             chat_response_audio = gr.Audio(autoplay=True)
             example_few_shots_dropdown = gr.Dropdown(
                 ["", "GPT example 1", "GPT example 2", "猫娘"], label="Select Few Shots Traning Examples"
@@ -70,6 +78,7 @@ with gr.Blocks() as demo:
             max_new_tokens_box,
             user_name_box,
             bot_name_box,
+            response_volume,
         ],
         [
             chat_history_box,
@@ -93,6 +102,7 @@ with gr.Blocks() as demo:
             max_new_tokens_box,
             user_name_box,
             bot_name_box,
+            response_volume,
         ],
         [
             chat_history_box,

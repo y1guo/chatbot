@@ -1,5 +1,5 @@
 from TTS.api import TTS
-from utils import DEVICE, freeup_vram
+from utils import DEVICE_AUX, freeup_vram
 
 
 def load_tts(model_name: str):
@@ -17,7 +17,7 @@ def load_tts(model_name: str):
     """
     global tts
     freeup_vram("tts")
-    tts = TTS(model_name=f"tts_models/{model_name}").to(DEVICE)
+    tts = TTS(model_name=f"tts_models/{model_name}").to(DEVICE_AUX)
     return f"Loaded {model_name}"
 
 

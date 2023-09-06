@@ -1,13 +1,11 @@
 from TTS.api import TTS
-from utils import freeup_vram
+from utils import DEVICE, freeup_vram
 
 
 # loading the text-to-speech model
 freeup_vram("tts")
 
-tts = TTS(
-    model_name="tts_models/en/vctk/vits", gpu=True
-)  # speaker: p243, p259, p263, p270, p306
+tts = TTS(model_name="tts_models/en/vctk/vits").to(DEVICE)  # speaker: p243, p259, p263, p270, p306
 
 
 def speak(text):

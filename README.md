@@ -1,25 +1,71 @@
-# chatbot
+# Chatbot
 
-## Working platform
+A chatbot demo that allows speech-to-speech or text based chat experience with the LLM. Local deployment. No APIs used.
 
-Windows WSL.
+## Environment
 
-## Required packages
+Create a virtual environment, I used conda here
 
+```bash
+conda create -n chatbot python=3.10
 ```
-conda create -n chatbot -c conda-forge python=3.10 numpy=1.22.4 pytorch=1.13.1 gradio transformers accelerate ffmpeg ffmpeg-python
+
+Activate the virtual environment
+
+```bash
 conda activate chatbot
-pip3 install bitsandbytes TTS openai-whipser
 ```
 
-```python=3.10, numpy=1.22.4, pytorch=1.13.1``` is required by ```TTS```.
+Install PyTorch
 
-```ffmpeg, ffmpeg-python``` required by ```openai-whisper```.
-
-```bitsandbytes``` is used for loading GPT-J-6B in ```int8```, in which it only takes 6GB of VRAM and can be loaded into GPUs that's other than X090.
-
-In WSL, I also need to symlink ```libcuda.so``` to the environment library seems ```bitsandbytes``` couldn't find it.
-
+```bash
+conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
 ```
-ln -s /usr/lib/wsl/lib/libcuda.so /home/USERNAME/miniconda3/envs/chatbot/lib/libcuda.so
+
+Install ffmpeg if you pytorch does not come with ffmpeg
+
+```bash
+conda install ffmpeg -c pytorch
 ```
+
+Install other dependencies
+
+```bash
+pip install gradio transformers TTS openai-whisper 
+```
+
+Now, it's sufficient for the chatbot to run with GPT-J and GPT-neo family.
+
+(Optional) Add support for ChatGLM2-6B
+
+```bash
+pip install transformers==4.30.2 cpm_kernels mdtex2html sentencepiece accelerate
+```
+
+(Optional) Allow loading GPT-J-6B in ```int8```, which reduces the VRAM requirement to 6GB. 
+
+```bash
+pip install bitsandbytes accelerate
+```
+
+### Note
+
+-   In WSL, I also need to symlink ```libcuda.so``` to the environment library. Otherwise it seems ```bitsandbytes``` could not find it.
+
+    Example:
+
+    ```bash
+    ln -s /usr/lib/wsl/lib/libcuda.so /home/USERNAME/miniconda3/envs/chatbot/lib/libcuda.so
+    ```
+
+## Launch the Demo
+
+```bash
+python demo/demo.py
+```
+
+Then open `https://localhost:7860` in the browser, or the link provided after the server fully started.
+
+## To-Do
+
+-   Replace `whisper` with `whisperX` to speed up speech recognition.

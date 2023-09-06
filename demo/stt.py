@@ -1,11 +1,11 @@
 import whisper
-from utils import freeup_vram
+from utils import DEVICE, freeup_vram
 
 
 def load_whisper(name):
     freeup_vram("model")
     global model
-    model = whisper.load_model(name)
+    model = whisper.load_model(name, device=DEVICE)
     return f"Whisper loaded with the {name} model"
 
 

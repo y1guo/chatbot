@@ -18,16 +18,16 @@ def chat(
     user_name,
     bot_name,
 ):
-    print(chat_input)
+    print(f"chat_input = {chat_input}")
     # detect audio filepath if it's audio
     if chat_input.startswith("/tmp/"):
         chat_input = transcribe(chat_input)
+        print(f"Transcribed chat_input = {chat_input}")
 
     # prepare prompt including few-shot and chat history
     # regulate each term every iteration since there might be '<br>' added into them.
     chat_history_list = [
-        (chat_regulator(user_text), chat_regulator(bot_text))
-        for (user_text, bot_text) in chat_history_list
+        (chat_regulator(user_text), chat_regulator(bot_text)) for (user_text, bot_text) in chat_history_list
     ]
 
     response, chat_history_list, text = chat_response(
@@ -71,13 +71,12 @@ with gr.Blocks() as demo:
                     "EleutherAI/gpt-neo-2.7B",
                     "EleutherAI/gpt-j-6B",
                     "THUDM/chatglm-6b",
+                    "THUDM/chatglm2-6b",
                 ],
                 value="EleutherAI/gpt-j-6B",
                 label="GPT model",
             )
-            gpt_dtype_radio = gr.Radio(
-                ["int8", "fp16", "fp32"], value="int8", label="GPT dtype"
-            )
+            gpt_dtype_radio = gr.Radio(["int8", "fp16", "fp32"], value="fp16", label="GPT dtype")
             gpt_in_use_box = gr.Textbox(label="GPT in use", show_label=False)
             gpt_load_button = gr.Button("Load GPT Model")
             do_sample_checkbox = gr.Checkbox(True, label="Do sample")
@@ -92,29 +91,21 @@ with gr.Blocks() as demo:
                 few_shot_training_prompt_box = gr.Textbox(show_label=False)
             clear_history_button = gr.Button("Clear History")
             chat_history_box = gr.Chatbot(label="History")
-            chat_input_box = gr.Textbox(
-                show_label=False, placeholder="Do you think I'm annoying?"
-            )
+            chat_input_box = gr.Textbox(show_label=False, placeholder="Do you think I'm annoying?")
             with gr.Accordion("Debug", open=False):
                 debug_info_box = gr.Textbox(show_label=False)
         with gr.Column(scale=1):
-            sst_model_radio = gr.Radio(
-                ["tiny", "base", "small"], value="tiny", label="Speech-to-Text model"
-            )
+            sst_model_radio = gr.Radio(["tiny", "base", "small"], value="tiny", label="Speech-to-Text model")
             sst_load_box = gr.Textbox(show_label=False)
             sst_load_button = gr.Button("Load Speech-to-Text Model")
-            chat_input_audio = gr.Audio(
-                label="Microphone", source="microphone", type="filepath"
-            )
+            chat_input_audio = gr.Audio(label="Microphone", source="microphone", type="filepath")
             chat_response_audio = gr.Audio()
-            example_few_shots_dropdown = gr.Dropdown(["猫娘","GPT example 1", "GPT example 2"], label="Select Few Shots Traning Examples")
+            example_few_shots_dropdown = gr.Dropdown(
+                ["猫娘", "GPT example 1", "GPT example 2"], label="Select Few Shots Traning Examples"
+            )
 
-    gpt_load_button.click(
-        load_gpt, inputs=[gpt_name_radio, gpt_dtype_radio], outputs=gpt_in_use_box
-    )
-    clear_history_button.click(
-        lambda: ([], []), None, [chat_history_box, chat_history_box]
-    )
+    gpt_load_button.click(load_gpt, inputs=[gpt_name_radio, gpt_dtype_radio], outputs=gpt_in_use_box)
+    clear_history_button.click(lambda: ([], []), None, [chat_history_box, chat_history_box])
     chat_input_box.submit(
         chat,
         [
@@ -137,7 +128,7 @@ with gr.Blocks() as demo:
         ],
     )
     sst_load_button.click(load_whisper, sst_model_radio, sst_load_box)
-    chat_input_audio.change(
+    chat_input_audio.stop_recording(
         chat,
         [
             example_few_shots_dropdown,
@@ -158,6 +149,10 @@ with gr.Blocks() as demo:
             debug_info_box,
         ],
     )
-    example_few_shots_dropdown.change(lambda _:generate_prompt(example_few_shots[_], "<usr>", "<bot>"), example_few_shots_dropdown, few_shot_training_prompt_box)
+    example_few_shots_dropdown.change(
+        lambda _: generate_prompt(example_few_shots[_], "<usr>", "<bot>"),
+        example_few_shots_dropdown,
+        few_shot_training_prompt_box,
+    )
 
 demo.launch(share=True)

@@ -2,6 +2,9 @@ import torch
 import gc
 
 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 # freeup the model and free up GPU RAM
 def freeup_vram(*args):
     memory_used_before = torch.cuda.memory_reserved(0) / 1024**3

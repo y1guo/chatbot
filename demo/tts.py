@@ -34,9 +34,9 @@ def speak(text: str):
     list
         Audio waveform
     """
-    # # selected speakers: p243, p259, p263, p270, p306
-    speaker = "p306" if tts.speakers and "p306" in tts.speakers else None
     try:
+        # selected speakers: p243, p259, p263, p270, p306
+        speaker = "p306" if tts.speakers and "p306" in tts.speakers else None
         wav = tts.tts(text=text, speaker=speaker)  # type: ignore
     except:
         wav = [0 for _ in range(20000)]

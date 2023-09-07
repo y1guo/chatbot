@@ -1,7 +1,7 @@
 import warnings
 
 warnings.filterwarnings("ignore")
-import gradio as gr
+import gradio as gr, os
 from stt import load_whisper
 from tts import load_tts
 from chat import load_gpt, generate_prompt, chat, EXAMPLE_FEW_SHOTS
@@ -19,8 +19,8 @@ with gr.Blocks() as demo:
                     "EleutherAI/gpt-j-6B",
                     "THUDM/chatglm-6b",
                     "THUDM/chatglm2-6b",
-                    "meta-llama/llama-2-7b",
-                    "meta-llama/llama-2-13b",
+                    "meta-llama/Llama-2-7b-hf",
+                    "meta-llama/Llama-2-13b-hf",
                     "meta-llama/Llama-2-7b-chat-hf",
                     "meta-llama/Llama-2-13b-chat-hf",
                 ],
@@ -39,12 +39,23 @@ with gr.Blocks() as demo:
             bot_name_box = gr.Textbox("Alice", label="AI name")
         with gr.Column(scale=3):
             with gr.Accordion("Few shot traning prompt", open=False):
-                few_shot_training_prompt_box = gr.Textbox(show_label=False)
+                few_shot_training_prompt_box = gr.Textbox(lines=20, show_label=False)
             clear_history_button = gr.Button("Clear History")
-            chat_history_box = gr.Chatbot(label="History")
-            chat_input_box = gr.Textbox(show_label=False, placeholder="Do you think I'm annoying?")
+            chat_history_box = gr.Chatbot(
+                label="Chat History",
+                height=800,
+                bubble_full_width=False,
+                avatar_images=(
+                    os.path.join(os.path.dirname(__file__), "assets", "user-avatar.svg"),
+                    os.path.join(os.path.dirname(__file__), "assets", "chatbot-avatar.jpg"),
+                ),
+            )
+            print(os.path.join(os.path.dirname(__file__), "assets", "user-avatar.svg"))
+            chat_input_box = gr.Textbox(
+                show_label=False, placeholder="What's the ultimate answer to life, the universe, and everything?"
+            )
             with gr.Accordion("Debug", open=False):
-                debug_info_box = gr.Textbox(show_label=False)
+                debug_info_box = gr.Textbox(lines=20, show_label=False)
         with gr.Column(scale=1):
             sst_model_radio = gr.Radio(
                 ["tiny", "base", "small", "medium", "large"], value="tiny", label="Speech-to-Text model"

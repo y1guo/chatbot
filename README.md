@@ -1,4 +1,4 @@
-# Chatbot
+# Yi's Chatbot
 
 A chatbot demo that allows speech-to-speech or text based chat experience with the LLM. Local deployment. No APIs used.
 
@@ -86,4 +86,4 @@ Then open `https://localhost:7860` in the browser, or the link provided after th
 
 -   Replace `whisper` with `whisperX` to speed up speech recognition.
 
--   Support custom soundbase for TTS, or stack a sovits upon TTS.
+-   Instead of coquiTTS, try Bert-VITS2 or tortoiseTTS. Bert-VITS2 has by far the best quality but it's also hard to implement as it's still in the early stage.

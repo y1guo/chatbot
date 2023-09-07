@@ -8,7 +8,7 @@ from chat import load_gpt, generate_prompt, chat, EXAMPLE_FEW_SHOTS
 
 
 with gr.Blocks() as demo:
-    gr.Markdown("""# <center>Chatbot</center>""")
+    gr.Markdown("""# <center>Yi's Chatbot</center>""")
     with gr.Row():
         with gr.Column(scale=1):
             gpt_name_radio = gr.Radio(

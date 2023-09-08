@@ -133,3 +133,6 @@ log.txt
 
 # dev tmp files
 prototype.ipynb
+
+# other packages
+vits2

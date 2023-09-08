@@ -1,6 +1,7 @@
 import warnings
 
 warnings.filterwarnings("ignore")
+
 import gradio as gr, os
 from stt import load_whisper
 from tts import load_tts
@@ -50,7 +51,6 @@ with gr.Blocks() as demo:
                     os.path.join(os.path.dirname(__file__), "assets", "chatbot-avatar.jpg"),
                 ),
             )
-            print(os.path.join(os.path.dirname(__file__), "assets", "user-avatar.svg"))
             chat_input_box = gr.Textbox(
                 show_label=False, placeholder="What's the ultimate answer to life, the universe, and everything?"
             )
@@ -63,9 +63,7 @@ with gr.Blocks() as demo:
             sst_load_box = gr.Textbox(show_label=False)
             sst_load_button = gr.Button("Load Speech-to-Text Model")
             chat_input_audio = gr.Audio(label="Microphone", source="microphone", type="filepath")
-            tts_model_radio = gr.Radio(
-                ["en/vctk/vits", "zh-CN/baker/tacotron2-DDC-GST"], value="en/vctk/vits", label="Text-to-Speech model"
-            )
+            tts_model_radio = gr.Radio(["Linus Tech Tips"], value="Linus Tech Tips", label="Text-to-Speech model")
             tts_load_box = gr.Textbox(show_label=False)
             tts_load_button = gr.Button("Load Text-to-Speech Model")
             response_volume = gr.Slider(0, 100, 67, label="Volume", step=1)

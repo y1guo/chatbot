@@ -21,7 +21,7 @@ conda activate chatbot
 Install PyTorch
 
 ```bash
-conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
+conda install pytorch torchvision torchaudio pytorch-cuda=11.7 cudatoolkit=11.7 -c pytorch -c nvidia
 ```
 
 Install ffmpeg if your pytorch does not come with ffmpeg
@@ -33,7 +33,32 @@ conda install ffmpeg -c pytorch
 Install other dependencies
 
 ```bash
-pip install gradio transformers TTS openai-whisper opencc
+pip install gradio transformers openai-whisper opencc
+```
+
+Install VITS2
+
+```bash
+# download VITS2
+cd /path/to/dir/you/like
+git clone git@github.com:daniilrobnikov/vits2.git
+# install required packages for VITS2
+cd vits2
+pip install -r requirements.txt
+```
+
+Add `vits2` directory to `PYTHONPATH`
+
+```bash
+conda env config vars set PYTHONPATH="/path/to/vits2"
+```
+
+<!-- Add an empty `__init__.py` file under `vits2/utils/` to make it importable. -->
+
+Create a symlink to `vits2` in the `demo` directory.
+
+```bash
+ln -s /path/to/vits2 demo/vits2
 ```
 
 Now, it's sufficient for the chatbot to run with GPT-J and GPT-neo family.
@@ -56,13 +81,14 @@ pip install bitsandbytes accelerate
 pip install transformers==4.30.2 cpm_kernels mdtex2html sentencepiece accelerate
 ```
 
-(Optional) Add support for Llama2. 
+(Optional) Add support for Llama2
 
 Llama2 is a private repository. You need to apply for access in advance, and associate the privilege with your HuggingFace account. Then login to gain access:
 
 ```bash
 huggingface-cli login
 ```
+
 
 ### Note
 

@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from datetime import datetime
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModel
-from utils import DEVICE, freeup_vram
+from commons import DEVICE, freeup_vram
 from stt import transcribe
 from tts import speak
 from typing import cast

@@ -1,5 +1,5 @@
 import whisper, opencc
-from utils import DEVICE_AUX, freeup_vram
+from commons import DEVICE_AUX, freeup_vram
 
 
 converter = opencc.OpenCC("t2s.json")

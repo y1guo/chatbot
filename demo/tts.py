@@ -34,7 +34,7 @@ def load_tts(model_name: str):
     net_g.eval()
     # find the lastest checkpoint
     num = 0
-    for file in os.listdir("vits2/datasets/custom_base/logs"):
+    for file in os.listdir(os.path.join(file_dir, "vits2/datasets/custom_base/logs")):
         if file.startswith("G_") and file.endswith(".pth"):
             num = max(num, int(file.split("G_")[1].split(".pth")[0]))
     model_name = os.path.join(file_dir, f"vits2/datasets/custom_base/logs/G_{num}.pth")
